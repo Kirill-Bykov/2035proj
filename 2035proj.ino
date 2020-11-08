@@ -1,29 +1,69 @@
 #include <AnalogKey.h>
+AnalogKey<A0, 6> keys;
 #include <GyverButton.h>
-
 #include "DHT.h"
 #include <Wire.h>
 #include <LCD.h>
 #include <LiquidCrystal_I2C.h>
-LiquidCrystal_I2C  lcd(0x27, 2, 1, 0, 4, 5, 6, 7); // 0x27 is the I2C bus address for an unmodified backpack
-#define DHTPIN 12 // Тот самый номер пина, о котором упоминалось выше
-//`````DHT dht(DHTPIN, DHT22); //Инициация датчика
-DHT dht(DHTPIN, DHT11);
 
-//класс клавиатуры
-class Keypad {
-    //Функция чтения
+LiquidCrystal_I2C  lcd(0x27, 2, 1, 0, 4, 5, 6, 7);
+#define DHTPIN 12 // Номер пина для датчика
+
+DHT dht(DHTPIN, DHT11);//DHT22
+//Класс управляющий выводом на экран
+class LCD_menu {
   public:
-    Keypad();
-    void key_pressed();
-    void key_disable();
+    LCD_menu();
+    void updateLCD();
+    void set_line_char():
+    void r_act();
+    void u_act();
+    void d_act();
+    void l_act();
+    void s_act();
+
+    private:
+      char menu[2][6][16] = {{
+        {"1111111111111111"},
+        {"2222222222222222"},
+        {"3333333333333333"},
+        {"4444444444444444"},
+        {"5555555555555555"},
+        {"6666666666666666"}
+      },
+
+      { {"AAAAAAAAAAAAAAAA"},
+        {"BBBBBBBBBBBBBBBB"},
+        {"CCCCCCCCCCCCCCCC"},
+        {"DDDDDDDDDDDDDDDD"},
+        {"EEEEEEEEEEEEEEEE"},
+        {"FFFFFFFFFFFFFFFF"}
+      }
+    };
+      int l1_num;
+      int l2_num;
+      int menu_num;
+      long int lastmillis;
+      long int hours;
+      long int minutes;
+      long int seconds;
+
+
+};
+//Класс управляющий приборами
+class Manager {
+  public:
+    Manager();
+    void set_value();
+    int  get_value();
+  private:
+    int menu_addr, line_addr;
+    float values[2][6]; // Массив с уставками и всем таким 
 };
 
-// минимальные и максимальные уставки
-float minimal_temperature = 15;
-float maximal_temperature = 25;
-float minimal_humid = 35;
-float maximal_humid = 60;
+//Инициализация главных классов
+LCD_menu menu;
+Manager mng;
 
 //Переменные температуры и влажности
 float temp;
@@ -41,84 +81,73 @@ int temp_down_pin = 2;
 int humid_up_pin = 3;
 int humid_down_pin = 4;
 
-//переменные для экрана
-int readkey;
-long int lastmillis;
-long int hours;
-long int minutes;
-long int seconds;
-int l1;
-int l2;
-int menu_num;
-char menu_line_char[2][6][16];
-boolean R_pressed, L_pressed, U_pressed, D_pressed, S_pressed, P_pressed;
-Keypad keypad;
+
+GButton R_btn, L_btn, U_btn, D_btn, S_btn, R_btn;
 
 //попытка добавить библиотеку GyverButton
 
 void setup() {
+
   pinMode(temp_up_pin, OUTPUT);
   pinMode(temp_down_pin, OUTPUT);
   pinMode(humid_up_pin, OUTPUT);
   pinMode(humid_down_pin, OUTPUT);
+
   digitalWrite(temp_up_pin, HIGH);
   digitalWrite(temp_down_pin, HIGH);
   digitalWrite(humid_up_pin, HIGH);
   digitalWrite(humid_down_pin, HIGH);
-  Serial.begin(9600);
-  dht.begin();
-  lastmillis = millis();
+
+  keys.attach(0, 10);
+  keys.attach(1, 150);
+  keys.attach(2, 330);
+  keys.attach(3, 515);
+  keys.attach(4, 740);
+  keys.attach(5, 930);
+
   lcd.begin(16, 2);
   lcd.setBacklightPin(3, POSITIVE);
   lcd.setBacklight(0);
   lcd.clear();
   lcd.home() ;
-  l1 = 0;
-  l2 = 1;
-}
 
+  lastmillis = millis();
+
+  Serial.begin(9600);
+
+  dht.begin();
+
+  l1_num = 0;
+  l2_num = 1;
+
+}
 
 void loop() {
   if (millis() - lastmillis > 15000) {
     lcd.setBacklight(HIGH);      // автоматическое выключение подсветки при отсутсвии действий в течении 15 секунд
   }
+  R_btn.tick(keys.status(0));
+  U_btn.tick(keys.status(1));
+  D_btn.tick(keys.status(2));
+  L_btn.tick(keys.status(3));
+  S_btn.tick(keys.status(4));
+  P_btn.tick(keys.status(5));
 
-  seconds = millis() / 1000 ;
-  minutes = seconds / 60 ;
-  hours = minutes / 60 ;
-  seconds = seconds - (minutes * 60) ;
-  minutes = minutes - hours * 60 ;
-  keypad.key_pressed();
-  //
-  //  if (R_pressed) {
-  //    R_act()
-  //  }
-  //  else if(U_pressed) {
-  //  }
-  //  else if(D_pressed) {
-  //  }
-  //  else if(L_pressed) {
-  //  }
-  //  else if(S_pressed) {
-  //
-  //  }
-  //  else if(P_pressed) {
-  //  }
+  work_time();
+  key_pressed();
   getTemp_Humid();
   check_temp();
   check_humid();
 }
 
 //вывод на экран
-void updateLCDline2() {
+void LCD_menu::updateLCD() {
   lcd.setCursor(0, 0);
-  lcd.print(menu_line_char[menu_num][l1]);
+  lcd.print(menu[menu_num][l1_num]);
   lcd.setCursor(0, 1);
-  lcd.print(menu_line_char[menu_num][l2]);
+  lcd.print(menu[menu_num][l2_num]);
   lcd.setBacklight(LOW);      // Backlight ON
 }
-
-
 
 //Функция считывания температуры и влажности, проверка связи с датчиком.
 void getTemp_Humid() {
@@ -131,13 +160,13 @@ void getTemp_Humid() {
 
 //Функция проверки температуры на соответствие уставкам. Выдает сигналы на включение реле.
 void check_temp() {
-  if (temp >= maximal_temperature && not(last_temp_max)) {
+  if (temp >= max_temp && not(last_temp_max)) {
     digitalWrite(temp_down_pin, LOW);
     digitalWrite(temp_up_pin, HIGH);
     last_temp_max = true;
     last_temp_min = false;
   }
-  if (temp <= minimal_temperature && not(last_temp_min)) {
+  if (temp <= min_temp && not(last_temp_min)) {
     digitalWrite(temp_up_pin, LOW);
     digitalWrite(temp_down_pin, HIGH);
     last_temp_min = true;
@@ -147,13 +176,13 @@ void check_temp() {
 
 //Функция проверки влажности на соответствие уставкам. Выдает сигналы на включение реле.
 void check_humid() {
-  if (humid >= maximal_humid && not(last_hum_max)) {
+  if (humid >= max_humid && not(last_hum_max)) {
     digitalWrite(humid_down_pin, LOW);
     digitalWrite(humid_up_pin, HIGH);
     last_hum_max = true;
     last_hum_min = false;
   }
-  if (humid <= minimal_humid && not(last_hum_min)) {
+  if (humid <= min_humid && not(last_hum_min)) {
     digitalWrite(humid_up_pin, LOW);
     digitalWrite(humid_down_pin, HIGH);
     last_hum_min = true;
@@ -161,45 +190,83 @@ void check_humid() {
   }
 }
 
-//Конструкторский конструктор
-Keypad::Keypad() {
+void key_pressed() {
+
+  if (R_btn.isClick()) R_act();
+
+  if (U_btn.isClick()) U_act();
+
+  if (D_btn.isClick()) D_act();
+
+  if (L_btn.isClick()) L_act();
+
+  if (S_btn.isClick()) S_act();
+
+  if (P_btn.isClick()) P_act();
 }
 
-void Keypad::key_pressed() {
-  readkey = analogRead(0);
+void LCD_menu::work_time() {
+  seconds = millis() / 1000 ;
+  minutes = seconds / 60 ;
+  hours = minutes / 60 ;
+  seconds = seconds - (minutes * 60) ;
+  minutes = minutes - hours * 60 ;
+}
 
-  if (readkey > 0 && readkey < 800) {
-    updateLCDline2();
-    lastmillis = millis();
-  }
-
-  if (readkey < 50) {
-    R_pressed = true;
-  }
-  else if (readkey < 176) {
-    U_pressed = true;
-  }
-  else if (readkey < 332) {
-    D_pressed = true;
-  }
-  else if (readkey < 525) {
-    L_pressed = true;
-  }
-  else if (readkey < 750) {
-    S_pressed = true;
-  }
-  else if (readkey < 950) {
-    P_pressed = true;
-    S_pressed = false;
+//функция действие на нажатие кнопки Right
+void LCD_menu::R_act() {
+  if (S_flag) {
+    mng.set_value(this.value,this.l_val);
+    }
+  else if (not(S_flag)) {
+    if (menu_num != 1) menu_num++;
+    else menu_num--;
   }
 }
-void Keypad::key_disable() {
-  R_pressed = false;
-  L_pressed = false;
-  U_pressed = false;
-  D_pressed = false;
-  P_pressed = false;
+
+//функция действие на нажатие кнопки Up
+void LCD_menu::U_act() {
+  if (S_flag) {
+    if not(isnan(l_val)) {
+      this.menu[l_val]++;
+  }
 }
-//void act_R(S_pressed){
-//
-//  }
+
+//функция действие на нажатие кнопки Down
+void LCD_menu::D_act() {
+  
+}
+
+//функция действие на нажатие кнопки Left
+void LCD_menu::L_act() 
+
+//функция действие на нажатие кнопки Sel
+void LCD_menu::S_act(){
+  if (not(S_flag)){
+    this.value = mng.get_value({this.menu_num,this.l1);
+  }
+  else if (S_flag){ 
+    this.value = mng.get_value({this.menu_num,this.l2);
+  }
+}
+
+//функция действие на нажатие кнопки Rst ну она вообще то все перезапускает сама по дефолту так что :c
+void LCD_menu::P_act(){
+  
+}
+
+void LCD_menu::set_line_char(){
+  
+}
+void Manage::Manage;
+
+int Manage::get_value(int[2] addr){
+  if (not(addr[0]>=0 && addr[0] <=1 && addr[1] >= 0 && addr[1] <=5)){
+    return 0
+    }
+  else return this.values[addr[0]][addr[1]];
+  }
+}
+void Manage::set_value{
+  
+}
