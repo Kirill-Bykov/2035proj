@@ -10,6 +10,7 @@ LiquidCrystal_I2C  lcd(0x27, 2, 1, 0, 4, 5, 6, 7);
 #define DHTPIN 12 // Номер пина для датчика
 
 DHT dht(DHTPIN, DHT11);//DHT22
+
 //Класс управляющий выводом на экран
 class LCD_menu {
   public:
@@ -21,10 +22,12 @@ class LCD_menu {
     void d_act();
     void l_act();
     void s_act();
+    void p_act();
+    void set_value();
     int  get_value();
 
   private:
-    float values[2][6];
+    int values[2][6];
     char char_menu[2][6][16] = {{
         {"Температура: " + char(values[0][0])},
         {"Влажность: " + char(values[0][1])},
@@ -51,16 +54,33 @@ class LCD_menu {
     long int minutes;
     long int seconds;
     boolean s_flag;
-
+    friend struct Data;
 };
 
 //Инициализация главных классов
 LCD_menu menu;
 
 //Переменные температуры и влажности
-float temp;
-float humid;
+struct Data {
+  float temp;
+  float humid;
 
+  int *norm_temp = menu.values[0][0];
+  int *norm_humid = menu.values[0][1];
+
+
+  int temp_heter = 3;
+  int humid_heter = 2;
+
+  int max_temp = &norm_temp + temp_heter;
+  int min_temp = &norm_temp - temp_heter;
+  int max_humid = &norm_humid + humid_heter;
+  int min_humid = &norm_humid - humid_heter;
+};
+
+// инициализация структуры
+
+Data data;
 //колхозные переменные для отслеживания последних действий
 boolean last_temp_max = false;
 boolean last_temp_min = false;
@@ -145,22 +165,22 @@ void LCD_menu::updateLCD() {
 
 //Функция считывания температуры и влажности, проверка связи с датчиком.
 void getTemp_Humid() {
-  temp = dht.readTemperature();
-  humid = dht.readHumidity();
-  if (isnan(humid) || isnan(temp)) {
+  data.temp = dht.readTemperature();
+  data.humid = dht.readHumidity();
+  if (isnan(data.humid) || isnan(data.temp)) {
     return;
   }
 }
 
 //Функция проверки температуры на соответствие уставкам. Выдает сигналы на включение реле.
 void check_temp() {
-  if (temp >= max_temp && not(last_temp_max)) {
+  if (data.temp >= data.max_temp && not(last_temp_max)) {
     digitalWrite(temp_down_pin, LOW);
     digitalWrite(temp_up_pin, HIGH);
     last_temp_max = true;
     last_temp_min = false;
   }
-  if (temp <= min_temp && not(last_temp_min)) {
+  if (data.temp <= data.min_temp && not(last_temp_min)) {
     digitalWrite(temp_up_pin, LOW);
     digitalWrite(temp_down_pin, HIGH);
     last_temp_min = true;
@@ -170,13 +190,13 @@ void check_temp() {
 
 //Функция проверки влажности на соответствие уставкам. Выдает сигналы на включение реле.
 void check_humid() {
-  if (humid >= max_humid && not(last_hum_max)) {
+  if (data.humid >= data.max_humid && not(last_hum_max)) {
     digitalWrite(humid_down_pin, LOW);
     digitalWrite(humid_up_pin, HIGH);
     last_hum_max = true;
     last_hum_min = false;
   }
-  if (humid <= min_humid && not(last_hum_min)) {
+  if (data.humid <= data.min_humid && not(last_hum_min)) {
     digitalWrite(humid_up_pin, LOW);
     digitalWrite(humid_down_pin, HIGH);
     last_hum_min = true;
@@ -199,24 +219,24 @@ void key_pressed() {
 
   if (P_btn.isClick()) menu.p_act();
 }
-void LCD_menu::LCD_menu(LiquidCrystal_I2C){}
-void LCD_menu::work_time {
-  this -> seconds = millis() / 1000 ;
-  this -> minutes = this -> seconds / 60 ;
-  this -> hours = this -> minutes / 60 ;
-  this -> seconds = this -> seconds - (this -> minutes * 60) ;
-  this -> minutes = this -> minutes - this -> hours * 60 ;
+
+void LCD_menu::work_time() {
+  (this -> seconds) = millis() / 1000 ;
+  (this -> minutes) = (this -> seconds) / 60 ;
+  (this -> hours) = (this -> minutes) / 60 ;
+  (this -> seconds) = (this -> seconds) - (this -> minutes) * 60 ;
+  (this -> minutes) = (this -> minutes) - (this -> hours) * 60 ;
 }
 
 //функция действие на нажатие кнопки Right
 void LCD_menu::r_act() {
   if (this -> s_flag) {
-    menu.set_value(this -> new_value, {this -> menu_num, this -> );
-                  }
-    else if (not(this -> s_flag)) {
-      if (menu_num != 1) menu_num++;
-      else menu_num--;
-    }
+    menu.set_value(this -> new_value, this -> addr );
+  }
+
+  else if (not(this -> s_flag)) {
+    if (menu_num != 1) menu_num++;
+    else menu_num--;
   }
 }
 
@@ -260,11 +280,12 @@ void LCD_menu::l_act() {
 void LCD_menu::s_act() {
   if (not(this -> s_flag)) {
     this -> new_value = menu.get_value(this -> menu_num, this -> this -> l1_num);
+    this -> addr = {(this -> menu_num), (this -> l1_num)};
     this -> s_flag = true;
   }
   else if (this -> s_flag) {
     this -> new_value = menu.get_value(this -> menu_num, this -> this -> l2_num);
-    
+    this -> addr = {(this -> menu_num), (this -> l2_num)};
   }
 }
 
