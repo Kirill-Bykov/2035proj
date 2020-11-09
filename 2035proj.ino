@@ -81,6 +81,8 @@ struct Data {
 // инициализация структуры
 
 Data data;
+
+//Вот это надо точно убрать :)
 //колхозные переменные для отслеживания последних действий
 boolean last_temp_max = false;
 boolean last_temp_min = false;
