@@ -1,4 +1,4 @@
-#include <AnalogKey.h>
+  #include <AnalogKey.h>
 AnalogKey<A0, 6> keys;
 #include <GyverButton.h>
 #include "DHT.h"
@@ -47,8 +47,8 @@ class LCD_menu {
     };
     int addr[2];
     int new_value;
-    int l1_num = 0;
-    int l2_num = 1;
+    int l1_num;
+    int l2_num;
     int menu_num;
     long int hours;
     long int minutes;
@@ -219,6 +219,15 @@ void key_pressed() {
 
   if (P_btn.isClick()) menu.p_act();
 }
+//конструктор класса 
+void LCD_menu::LCD_menu{
+  this -> addr = {0,0};
+  this -> new_value = 0;
+  this -> l1_num = 0;
+  this -> l2_num = 1;
+  this -> menu_num = 0;
+  this -> s_flag = false;
+}
 
 void LCD_menu::work_time() {
   (this -> seconds) = millis() / 1000 ;
@@ -231,7 +240,7 @@ void LCD_menu::work_time() {
 //функция действие на нажатие кнопки Right
 void LCD_menu::r_act() {
   if (this -> s_flag) {
-    menu.set_value(this -> new_value, this -> addr );
+    menu.set_value((this -> new_value), (this -> addr ));
   }
 
   else if (not(this -> s_flag)) {
@@ -273,7 +282,11 @@ void LCD_menu::d_act() {
 
 //функция действие на нажатие кнопки Left
 void LCD_menu::l_act() {
-
+  if (this -> s_flag) {
+    this -> new_value = 0;
+    this -> s_flag = false;
+    this -> addr = {0,0};
+  }
 }
 
 //функция действие на нажатие кнопки Sel
@@ -302,7 +315,7 @@ int LCD_menu::get_value(int[2] addr) {
 }
 
 //Функция записывающая значение в класс
-void LCD_menu::set_value(int value, int[2] addr) {
+void LCD_menu::set_value(value, addr) {
   if (not(addr[0] >= 0 && addr[0] <= 1 && addr[1] >= 0 && addr[1] <= 5))  return;
   else this -> values[addr[0], addr[1]] = value;
 }
