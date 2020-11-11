@@ -1,4 +1,4 @@
-  #include <AnalogKey.h>
+#include <AnalogKey.h>
 AnalogKey<A0, 6> keys;
 #include <GyverButton.h>
 #include "DHT.h"
@@ -24,37 +24,38 @@ class LCD_menu {
     void s_act();
     void p_act();
     void set_value();
+    void set_addr_value(int menu_num_l,int line_num_l,float value_l);
     int  get_value();
 
   private:
     int values[2][6];
     char char_menu[2][6][16] = {{
-        {"Температура: " + char(values[0][0])},
-        {"Влажность: " + char(values[0][1])},
-        {"3333333333333333"},
-        {"4444444444444444"},
+        {"Temperature:    "},
+        { float(values[0][1])},
+        {"Humidity:       "},
+        { values[0][3]},
         {"5555555555555555"},
         {"6666666666666666"}
-      },
-
-      { {"Экран наладки   "},
-        {"Норм.t :" + char(values[1][1])},
-        {"Норм.h :" + char(values[1][2])},
-        {"DDDDDDDDDDDDDDDD"},
+      },{
+        {"Norm.t :        "},
+        { values[1][1]},
+        {"Norm.h :        "},
+        { values[1][3]},
         {"EEEEEEEEEEEEEEEE"},
         {"FFFFFFFFFFFFFFFF"}
       }
     };
     int addr[2];
     int new_value;
-    int l1_num;
-    int l2_num;
+    int l1_num = 0;
+    int l2_num = 1;
     int menu_num;
     long int hours;
     long int minutes;
     long int seconds;
     boolean s_flag;
     friend struct Data;
+
 };
 
 //Инициализация главных классов
@@ -65,8 +66,8 @@ struct Data {
   float temp;
   float humid;
 
-  int *norm_temp = menu.values[0][0];
-  int *norm_humid = menu.values[0][1];
+  int *norm_temp = menu.values[1][1];
+  int *norm_humid = menu.values[1][3];
 
 
   int temp_heter = 3;
@@ -115,11 +116,11 @@ void setup() {
   digitalWrite(humid_up_pin, HIGH);
   digitalWrite(humid_down_pin, HIGH);
 
-  keys.attach(0, 10);
-  keys.attach(1, 150);
-  keys.attach(2, 330);
-  keys.attach(3, 515);
-  keys.attach(4, 740);
+  keys.attach(0, 0);
+  keys.attach(1, 130);
+  keys.attach(2, 310);
+  keys.attach(3, 477);
+  keys.attach(4, 720);
   keys.attach(5, 930);
 
   lcd.begin(16, 2);
@@ -138,19 +139,19 @@ void setup() {
 }
 
 void loop() {
-  //  if (millis() - lastmillis > 15000) {
-  //    lcd.setBacklight(HIGH);      // автоматическое выключение подсветки при отсутсвии действий в течении 15 секунд
-  //  }
-
+    if (millis() - lastmillis > 1500000) {
+      lcd.setBacklight(HIGH);      // автоматическое выключение подсветки при отсутсвии действий в течении 15 секунд
+    }
   R_btn.tick(keys.status(0));
   U_btn.tick(keys.status(1));
   D_btn.tick(keys.status(2));
   L_btn.tick(keys.status(3));
   S_btn.tick(keys.status(4));
   P_btn.tick(keys.status(5));
-  menu.work_time();
-  key_pressed();
   getTemp_Humid();
+  menu.set_addr_value(0,1,100);
+  menu.set_addr_value(0,3,100);
+  key_pressed();
   check_temp();
   check_humid();
   menu.updateLCD();
@@ -167,11 +168,11 @@ void LCD_menu::updateLCD() {
 
 //Функция считывания температуры и влажности, проверка связи с датчиком.
 void getTemp_Humid() {
-  data.temp = dht.readTemperature();
-  data.humid = dht.readHumidity();
-  if (isnan(data.humid) || isnan(data.temp)) {
-    return;
-  }
+  data.temp = 100;//dht.readTemperature();
+  data.humid = 100;//dht.readHumidity();
+  //if (isnan(data.humid) || isnan(data.temp)) {
+    //return;
+  //}
 }
 
 //Функция проверки температуры на соответствие уставкам. Выдает сигналы на включение реле.
@@ -221,9 +222,8 @@ void key_pressed() {
 
   if (P_btn.isClick()) menu.p_act();
 }
-//конструктор класса 
-void LCD_menu::LCD_menu{
-  this -> addr = {0,0};
+//конструктор класса
+LCD_menu::LCD_menu() {
   this -> new_value = 0;
   this -> l1_num = 0;
   this -> l2_num = 1;
@@ -231,6 +231,22 @@ void LCD_menu::LCD_menu{
   this -> s_flag = false;
 }
 
+void LCD_menu::set_addr_value(int menu_num_l = 0, int line_num_l = 0, float value_l = 0){
+  this->values[menu_num_l][line_num_l] = value_l;
+}
+//Функция получающая значение из класса
+int LCD_menu::get_value() {
+  if (not(((this -> addr[0]) >= 0) && ((this -> addr[0]) <= 1) && ((this -> addr[1]) >= 0) && ((this -> addr[1]) <= 5)))  return 0;
+  else return this -> values[this -> addr[0]][this -> addr[1]];
+}
+
+//Функция записывающая значение в класс
+void LCD_menu::set_value() {
+  if (not(((this -> addr[0]) >= 0) && ((this -> addr[0]) <= 1) && ((this -> addr[1]) >= 0) && ((this -> addr[1]) <= 5)))  return;
+  else this -> values[addr[0]][addr[1]] = this -> new_value;
+}
+
+//Функция счета времени
 void LCD_menu::work_time() {
   (this -> seconds) = millis() / 1000 ;
   (this -> minutes) = (this -> seconds) / 60 ;
@@ -241,27 +257,28 @@ void LCD_menu::work_time() {
 
 //функция действие на нажатие кнопки Right
 void LCD_menu::r_act() {
+  Serial.print("R clicked");
   if (this -> s_flag) {
-    menu.set_value((this -> new_value), (this -> addr ));
+    this->set_value();
+    this->s_flag = false;
   }
 
   else if (not(this -> s_flag)) {
-    if (menu_num != 1) menu_num++;
-    else menu_num--;
+    if (this->menu_num == 0) this->menu_num = 1;
+    else this->menu_num = 0;
   }
 }
 
 //функция действие на нажатие кнопки Up
 void LCD_menu::u_act() {
+  Serial.print("U clicked");
   if (this -> s_flag) {
-    this -> new_value++;
+    this -> new_value += 1;
   }
 
   else {
-    if (this -> l1_num >= 0 && this -> l1_num <= 4) {
+    if ((this -> l1_num > 0 && this -> l1_num <= 4)&&(this -> l2_num > 1 && this -> l2_num <= 5)){
       this -> l1_num -= 1;
-    }
-    if (this -> l2_num >= 1 && this -> l2_num <= 5) {
       this -> l2_num -= 1;
     }
   }
@@ -269,14 +286,13 @@ void LCD_menu::u_act() {
 
 //функция действие на нажатие кнопки Down
 void LCD_menu::d_act() {
+  Serial.print("D clicked");
   if (this -> s_flag) {
     this -> new_value--;
   }
   else {
-    if (this -> l1_num >= 0 && this -> l1_num <= 4) {
+    if ((this -> l1_num >= 0 && this -> l1_num < 4)&&(this -> l2_num >= 1 && this -> l2_num < 5)) {
       this -> l1_num += 1;
-    }
-    if (this -> l2_num >= 1 && this -> l2_num <= 5) {
       this -> l2_num += 1;
     }
   }
@@ -284,23 +300,34 @@ void LCD_menu::d_act() {
 
 //функция действие на нажатие кнопки Left
 void LCD_menu::l_act() {
+  Serial.print("L clicked");
   if (this -> s_flag) {
     this -> new_value = 0;
     this -> s_flag = false;
-    this -> addr = {0,0};
+    this -> addr[0] = 0;
+    this -> addr[1] = 0;
+  }
+  
+  else if (not(this -> s_flag)) {
+    if (this->menu_num == 0) this->menu_num = 1;
+    else this->menu_num = 0;
   }
 }
 
 //функция действие на нажатие кнопки Sel
 void LCD_menu::s_act() {
+  Serial.print("S clicked");
   if (not(this -> s_flag)) {
-    this -> new_value = menu.get_value(this -> menu_num, this -> this -> l1_num);
-    this -> addr = {(this -> menu_num), (this -> l1_num)};
-    this -> s_flag = true;
+    this->new_value = this->get_value();
+    this->addr[0] = this->menu_num;
+    this->addr[1] = this->l1_num;
+    this->s_flag = true;
   }
   else if (this -> s_flag) {
-    this -> new_value = menu.get_value(this -> menu_num, this -> this -> l2_num);
-    this -> addr = {(this -> menu_num), (this -> l2_num)};
+    this->new_value = this->get_value();
+    this->addr[0] = this->menu_num;
+    this->addr[1] = this->l2_num;
+
   }
 }
 
@@ -308,16 +335,4 @@ void LCD_menu::s_act() {
 //функция действие на нажатие кнопки Rst ну она вообще то все перезапускает сама по дефолту так что :c
 void LCD_menu::p_act() {
   return;
-}
-
-//Функция получающая значение из класса
-int LCD_menu::get_value(int[2] addr) {
-  if (not(addr[0] >= 0 && addr[0] <= 1 && addr[1] >= 0 && addr[1] <= 5))  return 0;
-  else return this -> values[addr[0]][addr[1]];
-}
-
-//Функция записывающая значение в класс
-void LCD_menu::set_value(value, addr) {
-  if (not(addr[0] >= 0 && addr[0] <= 1 && addr[1] >= 0 && addr[1] <= 5))  return;
-  else this -> values[addr[0], addr[1]] = value;
 }
