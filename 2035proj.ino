@@ -1,13 +1,12 @@
 #include <AnalogKey.h>
 AnalogKey<A0, 6> keys;
 #include <GyverButton.h>
-#include "DHT.h"
+#include <DHT.h>
 #include <Wire.h>
 #include <LCD.h>
 #include <LiquidCrystal_I2C.h>
-
 LiquidCrystal_I2C  lcd(0x27, 2, 1, 0, 4, 5, 6, 7);
-#define DHTPIN 12 // Номер пина для датчика
+#define DHTPIN 12 // Номер пина для датчикая
 
 DHT dht(DHTPIN, DHT11);//DHT22
 
@@ -24,23 +23,23 @@ class LCD_menu {
     void s_act();
     void p_act();
     void set_value();
-    void set_addr_value(int menu_num_l,int line_num_l,float value_l);
+    void set_addr_value(int menu_num_l, int line_num_l, float value_l);
     int  get_value();
 
   private:
     int values[2][6];
-    char char_menu[2][6][16] = {{
-        {"Temperature:    "},
-        { float(values[0][1])},
-        {"Humidity:       "},
-        { values[0][3]},
+    String char_menu[2][6] = {{
+        {"Temperature: " + String(values[0][1])},
+        {"Humidity: " + String(values[0][2])},
+        {"5555555555555555"},
+        {"5555555555555555"},
         {"5555555555555555"},
         {"6666666666666666"}
-      },{
-        {"Norm.t :        "},
-        { values[1][1]},
-        {"Norm.h :        "},
-        { values[1][3]},
+      }, {
+        {"Norm.t :" + String(values[1][1])},
+        {"Norm.h :" + String(values[1][2])},
+        {"EEEEEEEEEEEEEEEE"},
+        {"EEEEEEEEEEEEEEEE"},
         {"EEEEEEEEEEEEEEEE"},
         {"FFFFFFFFFFFFFFFF"}
       }
@@ -67,7 +66,7 @@ struct Data {
   float humid;
 
   int *norm_temp = menu.values[1][1];
-  int *norm_humid = menu.values[1][3];
+  int *norm_humid = menu.values[1][2];
 
 
   int temp_heter = 3;
@@ -139,9 +138,9 @@ void setup() {
 }
 
 void loop() {
-    if (millis() - lastmillis > 1500000) {
-      lcd.setBacklight(HIGH);      // автоматическое выключение подсветки при отсутсвии действий в течении 15 секунд
-    }
+  if (millis() - lastmillis > 1500000) {
+    lcd.setBacklight(HIGH);      // автоматическое выключение подсветки при отсутсвии действий в течении 15 секунд
+  }
   R_btn.tick(keys.status(0));
   U_btn.tick(keys.status(1));
   D_btn.tick(keys.status(2));
@@ -149,8 +148,8 @@ void loop() {
   S_btn.tick(keys.status(4));
   P_btn.tick(keys.status(5));
   getTemp_Humid();
-  menu.set_addr_value(0,1,100);
-  menu.set_addr_value(0,3,100);
+  menu.set_addr_value(0, 1, 100);
+  menu.set_addr_value(0, 2, 100);
   key_pressed();
   check_temp();
   check_humid();
@@ -168,11 +167,11 @@ void LCD_menu::updateLCD() {
 
 //Функция считывания температуры и влажности, проверка связи с датчиком.
 void getTemp_Humid() {
-  data.temp = 100;//dht.readTemperature();
-  data.humid = 100;//dht.readHumidity();
-  //if (isnan(data.humid) || isnan(data.temp)) {
-    //return;
-  //}
+  data.temp = dht.readTemperature();
+  data.humid = dht.readHumidity();
+  if (isnan(data.humid) || isnan(data.temp)) {
+    return;
+  }
 }
 
 //Функция проверки температуры на соответствие уставкам. Выдает сигналы на включение реле.
@@ -231,7 +230,7 @@ LCD_menu::LCD_menu() {
   this -> s_flag = false;
 }
 
-void LCD_menu::set_addr_value(int menu_num_l = 0, int line_num_l = 0, float value_l = 0){
+void LCD_menu::set_addr_value(int menu_num_l = 0, int line_num_l = 0, float value_l = 0) {
   this->values[menu_num_l][line_num_l] = value_l;
 }
 //Функция получающая значение из класса
@@ -257,7 +256,6 @@ void LCD_menu::work_time() {
 
 //функция действие на нажатие кнопки Right
 void LCD_menu::r_act() {
-  Serial.print("R clicked");
   if (this -> s_flag) {
     this->set_value();
     this->s_flag = false;
@@ -266,6 +264,11 @@ void LCD_menu::r_act() {
   else if (not(this -> s_flag)) {
     if (this->menu_num == 0) this->menu_num = 1;
     else this->menu_num = 0;
+    lcd.setCursor(0, 0);
+    lcd.print("                ");
+    lcd.setCursor(0, 1);
+    lcd.print("                ");
+
   }
 }
 
@@ -277,9 +280,13 @@ void LCD_menu::u_act() {
   }
 
   else {
-    if ((this -> l1_num > 0 && this -> l1_num <= 4)&&(this -> l2_num > 1 && this -> l2_num <= 5)){
+    if ((this -> l1_num > 0 && this -> l1_num <= 4) && (this -> l2_num > 1 && this -> l2_num <= 5)) {
       this -> l1_num -= 1;
       this -> l2_num -= 1;
+      lcd.setCursor(0, 0);
+      lcd.print("                ");
+      lcd.setCursor(0, 1);
+      lcd.print("                ");
     }
   }
 }
@@ -291,9 +298,13 @@ void LCD_menu::d_act() {
     this -> new_value--;
   }
   else {
-    if ((this -> l1_num >= 0 && this -> l1_num < 4)&&(this -> l2_num >= 1 && this -> l2_num < 5)) {
+    if ((this -> l1_num >= 0 && this -> l1_num < 4) && (this -> l2_num >= 1 && this -> l2_num < 5)) {
       this -> l1_num += 1;
       this -> l2_num += 1;
+      lcd.setCursor(0, 0);
+      lcd.print("                ");
+      lcd.setCursor(0, 1);
+      lcd.print("                ");
     }
   }
 }
@@ -307,10 +318,14 @@ void LCD_menu::l_act() {
     this -> addr[0] = 0;
     this -> addr[1] = 0;
   }
-  
+
   else if (not(this -> s_flag)) {
     if (this->menu_num == 0) this->menu_num = 1;
     else this->menu_num = 0;
+    lcd.setCursor(0, 0);
+    lcd.print("                ");
+    lcd.setCursor(0, 1);
+    lcd.print("                ");
   }
 }
 
