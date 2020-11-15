@@ -27,7 +27,7 @@ class LCD_menu {
     int  get_value();
 
   private:
-    int values[2][6];
+    float values[2][6];
     String char_menu[2][6] = {{
         {"Temperature: " + String(values[0][1])},
         {"Humidity: " + String(values[0][2])},
@@ -65,8 +65,8 @@ struct Data {
   float temp;
   float humid;
 
-  int *norm_temp = menu.values[1][1];
-  int *norm_humid = menu.values[1][2];
+  float *norm_temp = &menu.values[1][1];
+  float *norm_humid = &menu.values[1][2];
 
 
   int temp_heter = 3;
@@ -148,8 +148,8 @@ void loop() {
   S_btn.tick(keys.status(4));
   P_btn.tick(keys.status(5));
   getTemp_Humid();
+  menu.set_addr_value(0, 0, 100);
   menu.set_addr_value(0, 1, 100);
-  menu.set_addr_value(0, 2, 100);
   key_pressed();
   check_temp();
   check_humid();
