@@ -29,15 +29,15 @@ class LCD_menu {
   private:
     float values[2][6];
     String char_menu[2][6] = {{
-        {"Temperature: " + String(values[0][1])},
-        {"Humidity: " + String(values[0][2])},
+        {"Temperature: " + String(values[0][0])},
+        {"Humidity: " + String(values[0][1])},
         {"5555555555555555"},
         {"5555555555555555"},
         {"5555555555555555"},
         {"6666666666666666"}
       }, {
-        {"Norm.t :" + String(values[1][1])},
-        {"Norm.h :" + String(values[1][2])},
+        {"Norm.t :" + String(values[1][0])},
+        {"Norm.h :" + String(values[1][1])},
         {"EEEEEEEEEEEEEEEE"},
         {"EEEEEEEEEEEEEEEE"},
         {"EEEEEEEEEEEEEEEE"},
@@ -54,7 +54,6 @@ class LCD_menu {
     long int seconds;
     boolean s_flag;
     friend struct Data;
-
 };
 
 //Инициализация главных классов
@@ -65,8 +64,8 @@ struct Data {
   float temp;
   float humid;
 
-  float *norm_temp = &menu.values[1][1];
-  float *norm_humid = &menu.values[1][2];
+  float *norm_temp = &menu.values[1][0];
+  float *norm_humid = &menu.values[1][1];
 
 
   int temp_heter = 3;
@@ -148,13 +147,15 @@ void loop() {
   S_btn.tick(keys.status(4));
   P_btn.tick(keys.status(5));
   getTemp_Humid();
-  menu.set_addr_value(0, 0, 100);
-  menu.set_addr_value(0, 1, 100);
+  menu.set_addr_value(0, 0, 100.0);
+  menu.set_addr_value(0, 1, 100.0);
   key_pressed();
   check_temp();
   check_humid();
   menu.updateLCD();
 }
+//Контсруктор класса LCD;sck.sld
+LCD_menu::LCD_menu 
 
 //вывод на экран
 void LCD_menu::updateLCD() {
@@ -333,15 +334,15 @@ void LCD_menu::l_act() {
 void LCD_menu::s_act() {
   Serial.print("S clicked");
   if (not(this -> s_flag)) {
-    this->new_value = this->get_value();
+    this->s_flag = true;
     this->addr[0] = this->menu_num;
     this->addr[1] = this->l1_num;
-    this->s_flag = true;
+    this->new_value = this->get_value();
   }
   else if (this -> s_flag) {
-    this->new_value = this->get_value();
     this->addr[0] = this->menu_num;
     this->addr[1] = this->l2_num;
+    this->new_value = this->get_value();
 
   }
 }
