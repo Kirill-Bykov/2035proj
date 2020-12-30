@@ -29,8 +29,8 @@ class LCD_menu {
     int  get_value();
 
   private:
-    float values[2][6];
-    String char_menu[2][6];
+    int values[4][10];//1 - показания 2 - уставки 3 - ручные пуски 4 - настройки для меня 
+    String char_menu[4][10];
     int addr[2];
     int new_value;
     int l1_num = 0;
@@ -49,39 +49,63 @@ LCD_menu menu;
 //Переменные температуры и влажности
 struct Data {
   public:
-    float space_temp;
-    float humid;
-    float animal_temp;
-    float animal_O2;
-    float space_O2;
-    float space_CO2;
+    int space_temp;
+    int humid;
+    int animal_temp;
+    int animal_O2;
+    int space_O2;
+    int space_CO2;
    
-    float *norm_space_temp = &menu.values[1][0];
-    float *norm_humid = &menu.values[1][1];
-    float *norm_animal_O2 = &menu.values[1][2];
-    float *norm_space_O2 = &menu.values[1][3];
-    float *norm_animal_temp = &menu.values[1][4];
-    float *norm_space_CO2 = &menu.values[1][5];
+    int *n_space_temp = &menu.values[1][1];
+    int *n_humid = &menu.values[1][2];
+    int *n_animal_O2 = &menu.values[1][3];
+    int *n_space_O2 = &menu.values[1][4];
+    int *n_animal_temp = &menu.values[1][5];
+    int *n_space_CO2 = &menu.values[1][6];
+
+    int *space_temp_heter = &menu.values[2][1];
+    int *humid_heter = &menu.values[2][2];
+    int *animal_O2_heter = &menu.values[2][3];
+    int *space_O2_heter = &menu.values[2][4];
+    int *animal_temp_heter = &menu.values[2][5];
+    int *space_CO2_heter = &menu.values[2][6];
     
-    int space_temp_heter = 3;
-    int humid_heter = 2;
-    int animal_O2_heter = 3;
-    int space_O2_heter = 3;
-    int animal_temp_heter = 0.3;
-    int space_CO2_heter = 3;
-  
-    int max_space_temp = *norm_space_temp + space_temp_heter;
-    int min_space_temp = *norm_space_temp - space_temp_heter;
-    int max_humid = *norm_humid + humid_heter;
-    int min_humid = *norm_humid - humid_heter;
-    int max_animal_O2 = *norm_animal_O2 + animal_O2_heter;
-    int min_animal_O2 = *norm_animal_O2 - animal_O2_heter;
-    int max_space_O2 = *norm_space_O2 + space_O2_heter;
-    int min_space_O2 = *norm_space_O2 - space_O2_heter;
-    int max_animal_temp = *norm_animal_temp + animal_temp_heter;
-    int min_animal_temp = *norm_animal_temp - animal_temp_heter;
-    int max_space_CO2 = *norm_space_CO2 + space_CO2_heter;
-    int min_space_CO2 = *norm_space_CO2 - space_CO2_heter;
+    int max_space_temp(){
+      return (*n_space_temp + *space_temp_heter);
+    }
+    int min_space_temp(){
+      return (*n_space_temp - *space_temp_heter);
+    }
+    int max_humid(){
+      return (*n_humid + *humid_heter);
+    }
+    int min_humid(){
+      return (*n_humid - *humid_heter);
+    }
+    int max_animal_O2(){
+      return (*n_animal_O2 + *animal_O2_heter);
+    }
+    int min_animal_O2(){
+      return (*n_animal_O2 - *animal_O2_heter);
+    }
+    int max_space_O2(){
+      return (*n_space_O2 + *space_O2_heter);
+    }
+    int min_space_O2(){
+      return (*n_space_O2 - *space_O2_heter);
+    }
+    int max_animal_temp(){
+      return (*n_animal_temp + *animal_temp_heter);
+    }
+    int min_animal_temp(){
+      return (*n_animal_temp - *animal_temp_heter);
+    }
+    int max_space_CO2(){
+      return (*n_space_CO2 + *space_CO2_heter);
+    }
+    int min_space_CO2(){
+      return (*n_space_CO2 - *space_CO2_heter);
+    }
 };
 
 // инициализация структуры
@@ -96,55 +120,77 @@ int carpet_pin = 4;
 int UV_lamp_pin = 5;
 int IR_lamp_pin = 6;
 int ionizer_pin = 7;
+int dehumidifier_pin = 8;
 
 //переменные времени
 long int lastmillis;
 
-
+//кнопки
 GButton R_btn, L_btn, U_btn, D_btn, S_btn, P_btn;
 
 
 
 
-//сигнатурный класс для коврика подогрева
+//Класс прибор
 class Device{
   public:
     Device(int pin){
-      time_ON = 0;
       time_OFF = 0;
       start_millis = 0;
       stop_millis = 0;
       ON_OFF = false;
       device_pin = pin;
     }
+    
     void on(){
       digitalWrite(device_pin,LOW);
+      if (ON_OFF) return;
       ON_OFF = true;
       start_millis = millis();
     }
+    
     void off(){
       digitalWrite(device_pin,HIGH);
+      if(not(ON_OFF)) return;
       ON_OFF = false;
       stop_millis = millis();
     }
-    void timer(){
+    
+    long int time_ON(){
       if (ON_OFF){
-        time_ON = millis() - start_millis;
+        time_ = millis() - start_millis;
         time_OFF = 0;
-      }
-      if (not(ON_OFF)){
-        time_OFF = millis() - stop_millis;
-        time_ON = 0;
+        return time_;
       }
     }
+    
+    
   private:
     bool ON_OFF;
-    long int time_ON;
+    long int time_;
     long int time_OFF;
     long int start_millis;
     long int stop_millis;
     int device_pin;
 };
+
+Device oxygenerator(oxygenerator_pin);
+Device cooling_fan(cooling_fan_pin);
+Device humidifier(humidifier_pin);
+Device dehumidifier(dehumidifier_pin);
+Device carpet(carpet_pin);
+Device UV_lamp(UV_lamp_pin);
+Device IR_lamp(IR_lamp_pin);
+Device ionizer(ionizer_pin);
+
+
+int to_int(float num){
+  return(int(num*10));
+}
+
+float to_float(int num){
+  return(float(num)/10);
+}
 
 //вывод на экран
 void LCD_menu::updateLCD() {
@@ -155,15 +201,10 @@ void LCD_menu::updateLCD() {
   lcd.setBacklight(LOW);      // Backlight ON
 }
 
-//задание значения в указанный адрес 
-void LCD_menu::set_adr_value(int a1, int a2, float val){
-  values[a1][a2] = val;
-}
-
 //Функция считывания температуры и влажности, проверка связи с датчиком.
 void getTemp_Humid() {
-  data.space_temp = dht.readTemperature();
-  data.humid = dht.readHumidity();
+  data.space_temp = int(dht.readTemperature()*10);
+  data.humid = int(dht.readHumidity()*10);
   Serial.print(data.space_temp);
   if (isnan(data.humid) || isnan(data.space_temp)) {
     return;
@@ -202,33 +243,53 @@ LCD_menu::LCD_menu() {
 
 //Отправка значений для индикации на экран
 void LCD_menu::set_menu() {
-  char_menu[0][0] = "SpaceTemp " + String(values[0][0]);
-  char_menu[0][1] = "Humid " + String(values[0][1]);
-  char_menu[0][2] = "AnimO2" + String(values[0][2]);
-  char_menu[0][3] = "SpaceO2" + String(values[0][3]);
-  char_menu[0][4] = "AnimTemp " + String(values[0][4]);
-  char_menu[0][5] = "Space_CO2 " + String(values[0][5]);
   
-  char_menu[1][0] = "nSpaceTemp " + String(values[1][0]);
-  char_menu[1][1] = "nHumid " + String(values[1][1]);
-  char_menu[1][2] = "nAnimO2 " + String(values[1][2]);
-  char_menu[1][3] = "nSpaceO2 " + String(values[1][3]);
-  char_menu[1][4] = "nAnimTemp " + String(values[1][4]);
-  char_menu[1][5] = "nSpace " + String(values[1][5]);
+  char_menu[0][0] = "Real Values";
+  char_menu[0][1] = "Space_temp " + String(to_float(values[0][1]));
+  char_menu[0][2] = "Humidity   " + String(to_float(values[0][2]));
+  char_menu[0][3] = "Animal_O2  " + String(to_float(values[0][3]));
+  char_menu[0][4] = "Space_O2   " + String(to_float(values[0][4]));
+  char_menu[0][5] = "AnimalTemp " + String(to_float(values[0][5]));
+  char_menu[0][6] = "Space_CO2  " + String(to_float(values[0][6]));
+  
+  char_menu[1][0] = "Normal Values";
+  char_menu[1][1] = "SpaceTemp  " + String(to_float(values[1][1]));
+  char_menu[1][2] = "Humidity   " + String(to_float(values[1][2]));
+  char_menu[1][3] = "Animal_O2  " + String(to_float(values[1][3]));
+  char_menu[1][4] = "Space_O2   " + String(to_float(values[1][4]));
+  char_menu[1][5] = "AnimalTemp " + String(to_float(values[1][5]));
+  char_menu[1][6] = "Space_CO2  " + String(to_float(values[1][6]));
+
+  char_menu[2][0] = "Heterozis";
+  char_menu[2][1] = "Space_temp " + String(to_float(values[2][1]));
+  char_menu[2][2] = "Humidity   " + String(to_float(values[2][2]));
+  char_menu[2][3] = "Animal_O2  " + String(to_float(values[2][3]));
+  char_menu[2][4] = "Space_O2   " + String(to_float(values[2][4]));
+  char_menu[2][5] = "AnimalTemp " + String(to_float(values[2][5]));
+  char_menu[2][6] = "Space_CO2  " + String(to_float(values[2][6]));
+
+  char_menu[3][0] = "Manual Start";
+  
 }
 
 void LCD_menu::set_values(){
-  values[0][0] = data.space_temp;
-  values[0][1] = data.humid;
-  values[0][2] = data.animal_O2;
-  values[0][3] = data.space_O2;
-  values[0][4] = data.animal_temp;
-  values[0][5] = data.space_CO2;
+  values[0][1] = data.space_temp;
+  values[0][2] = data.humid;
+  values[0][3] = data.animal_O2;
+  values[0][4] = data.space_O2;
+  values[0][5] = data.animal_temp;
+  values[0][6] = data.space_CO2;
 }
 //Функция получающая значение из класса
 int LCD_menu::get_value() {
   if (not((( addr[0]) >= 0) && (( addr[0]) <= 1) && (( addr[1]) >= 0) && (( addr[1]) <= 5)))  return 0;
   else return  values[ addr[0]][ addr[1]];
+}
+
+//Функция записывающая значение в класс
+void LCD_menu::set_value() {
+  if (not((( addr[0]) >= 0) && (( addr[0]) <= 1) && (( addr[1]) >= 0) && (( addr[1]) <= 5)))  return;
+  else  values[addr[0]][addr[1]] =  new_value;
 }
 
 //Функция счета времени
@@ -336,6 +397,92 @@ void LCD_menu::p_act() {
   return;
 }
 
+void space_temp_regulation(){
+  if (data.space_temp < data.min_space_temp()){
+    carpet.on();
+    IR_lamp.on();
+  }
+  if ((millis() - carpet.time_ON()) > 300000){
+    carpet.off();
+  }
+  if (data.space_temp >= data.n_space_temp){
+    carpet.off();
+    IR_lamp.off();
+  }
+  if (data.space_temp > data.max_space_temp()){
+    cooling_fan.on();
+  }
+  if (data.space_temp <= data.n_space_temp){
+    cooling_fan.off();
+  }
+}
+
+void humidity_regulation(){
+  if (data.humid < data.min_humid()){
+    humidifier.on();
+  }
+  if (data.humid >= data.n_humid){
+    humidifier.off();
+  }
+  if (data.humid > data.max_humid()){
+    dehumidifier.on();
+  }
+  if (data.humid <= data.n_humid){
+    dehumidifier.off();
+  }
+}
+
+void animal_temp_regulation(){
+  if (data.animal_temp < data.min_animal_temp()){
+    carpet.on();
+    IR_lamp.on(); 
+  }
+  if ((millis() - carpet.time_ON()) > 300000){
+    carpet.off();
+  }
+  if (data.animal_temp >= data.n_animal_temp){
+    carpet.off();
+    IR_lamp.off();
+  }
+  if (data.animal_temp > data.max_animal_temp()){
+    cooling_fan.on();
+  }
+  if (data.animal_temp <= data.n_animal_temp){
+    cooling_fan.off();
+  }
+}
+
+void animal_O2_regulation(){
+  if (data.animal_O2 < data.min_animal_O2()){
+    oxygenerator.on();
+  }
+  if (data.animal_O2 >= data.n_animal_O2){
+    oxygenerator.off();
+  }
+}
+
+void space_O2_regulation(){
+  if(data.space_O2 < data.min_space_O2()){
+    oxygenerator.on();
+    cooling_fan.on();
+  }
+  if(data.space_O2 >= data.n_space_O2){
+    oxygenerator.off();
+    cooling_fan.on();
+  }
+}
+
+void space_CO2_regulation(){
+  if(data.space_CO2 > data.max_space_CO2()){
+    oxygenerator.on();
+    cooling_fan.on();
+  }
+  if(data.space_CO2 <= data.n_space_CO2){
+    oxygenerator.off();
+    cooling_fan.on();
+  }
+}
+
 void setup() {
 
   pinMode(oxygenerator_pin, OUTPUT);
@@ -366,14 +513,6 @@ void setup() {
   lcd.setBacklight(0);
   lcd.clear();
   lcd.home();
-
-  Device oxygenerator(oxygenerator_pin);
-  Device cooling_fan(cooling_fan_pin);
-  Device humidifier(humidifier_pin);
-  Device carpet(carpet_pin);
-  Device UV_lamp(UV_lamp_pin);
-  Device IR_lamp(IR_lamp_pin);
-  Device ionizer(ionizer_pin);
 
   lastmillis = millis();
 
